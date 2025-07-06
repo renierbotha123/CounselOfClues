@@ -40,14 +40,6 @@ export default function OnboardingLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false
-      }}
-    >
-      <Stack.Screen name="WelcomeScreen" />
-      <Stack.Screen name="WelcomeScreen2" />
-      <Stack.Screen name="WelcomeScreen3" />
-    </Stack>
+    <Stack screenOptions={{ headerShown: false }} />
   );
 }
