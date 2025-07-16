@@ -22,6 +22,7 @@ export const utl = StyleSheet.create({
   bgSurface: { backgroundColor: Colors.surface },
   bgTransparent: { backgroundColor: 'transparent' },
   bgWhite: { backgroundColor: '#FFFFFF' },
+  bgDisabled: { backgroundColor: Colors.disabled },
 
   
   // TEXT COLORS
@@ -31,6 +32,7 @@ export const utl = StyleSheet.create({
   textLight: { color: Colors.textLight },
   textGold: { color: Colors.primary },
   textError: { color: Colors.error },
+  textMuted: { color: Colors.muted },
 
   // FONT FAMILY
   fontJost: { fontFamily: 'Jost_400Regular' },
@@ -139,6 +141,7 @@ export const utl = StyleSheet.create({
   roundedSm: { borderRadius: 4 },
   roundedMd: { borderRadius: 8 },
   roundedLg: { borderRadius: 12 },
+  roundedXl: { borderRadius: 16 },
   roundedFull: { borderRadius: 999 },
 
   // WIDTH/HEIGHT

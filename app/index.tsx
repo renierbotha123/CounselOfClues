@@ -4,6 +4,7 @@ import { View, Text } from 'react-native';
 
 export default function Index() {
   useEffect(() => {
+    // Automatically go to tabs (or onboarding if logged out)
     router.replace('/onboarding/WelcomeScreen');
   }, []);
 

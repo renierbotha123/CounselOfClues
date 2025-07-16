@@ -10,4 +10,6 @@ export const Colors = {
   textLight: '#E9E9E9',
   link: '#CBA84E',
   error: '#FF4C4C',
+  disabled: '#555555',
+  muted: '#AAAAAA',
 };

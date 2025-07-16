@@ -26,7 +26,7 @@ export default function InputField({
   return (
     <View style={[style]}>
       {label && (
-        <Text style={[utl.textLight, utl.mb4, utl.fontJostMedium, utl.textBase]}>
+        <Text style={[utl.textLight, utl.mb4, utl.fontJostMedium, utl.textSm]}>
           {required ? '*' : ''}{label}
         </Text>
       )}
@@ -38,11 +38,12 @@ export default function InputField({
         onChangeText={onChangeText}
         style={[
           utl.bgSurface,
-          utl.textPrimary,
+          utl.textDark,
           utl.p12,
           utl.roundedLg,
           utl.border1,
           utl.fontJost,
+          utl.textBase,
           inputStyle,
         ]}
         

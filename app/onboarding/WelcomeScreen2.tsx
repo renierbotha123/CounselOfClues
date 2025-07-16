@@ -6,11 +6,12 @@ import PrimaryButton from '../../components/PrimaryButtons';
 import { useRouter } from 'expo-router';
 
 export default function WelcomeScreen2() {
+  const router = useRouter();
   return (
     <ImageBackground
       source={require('../../assets/images/welcome1-background.png')}
       style={[utl.flex1, utl.bgDark,]}
-      resizeMode='cover'
+      resizeMode='contain'
       
     >
       <ScrollView style={[utl.flex1, utl.py64]}>
@@ -65,7 +66,7 @@ export default function WelcomeScreen2() {
          <PrimaryButton
             title="Next"
             icon={<Ionicons name="arrow-forward" size={20} color="#333" />}
-            onPress={() => console.log('Next')}
+            onPress={() => router.push('/onboarding/WelcomeScreen3')}
           />
         </View>
       </ScrollView>

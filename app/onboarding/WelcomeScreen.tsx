@@ -16,7 +16,7 @@ export default function WelcomeScreen() {
 <ImageBackground
     source={require('../../assets/images/welcome1-background.png')}
     style={[utl.flex1, utl.bgDark]}
-    resizeMode='center'
+    resizeMode='contain'
     >
     <ScrollView style={[utl.flex1, utl.py64]}>
       
