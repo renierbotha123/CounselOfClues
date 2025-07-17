@@ -45,7 +45,7 @@ const handleSignUp = async () => {
 
     console.log('✅ Registered:', response.data);
     await saveToken(response.data.token);
-    router.replace('/HomeScreen'); // or wherever you want to send them
+    router.replace('(tabs)/Home'); // or wherever you want to send them
   } catch (error) {
     console.error('❌ Sign up failed:', error);
     setErrors(['Could not sign up. Please try again.']);

@@ -38,7 +38,7 @@ const handleLogin = async () => {
 
     console.log('✅ Logged in:', response.data);
     await saveToken(response.data.token);
-    router.replace('/HomeScreen'); // or wherever you want to go
+    router.replace('(tabs)/home'); // or wherever you want to go
   } catch (error) {
     console.error('❌ Login failed:', error);
     setErrors(['Invalid email or password.']);
