@@ -79,27 +79,36 @@ export default function QuestionScreen() {
 
   const currentQuestion = questions[currentQuestionIndex];
 
-  const handleNext = async () => {
-    try {
-  await api.post(`/answers/${gameId}/${playerId}/${round}`, {
-    question: currentQuestion.question, // ✅ Required by DB
-    answer: currentAnswer,
-    type: currentQuestion.type || 'text',
-    selected_option: currentAnswer, // optional — only used for multiple choice
-  });
+ const handleNext = async () => {
+  try {
+    const res = await api.post(`/answers/${gameId}/${playerId}/${round}`, {
+      question: currentQuestion.question,
+      answer: currentAnswer,
+      type: currentQuestion.type || 'text',
+      selected_option: currentAnswer || null,
+    });
 
+    setCurrentAnswer(null);
 
-      setCurrentAnswer(null);
-
-      if (currentQuestionIndex + 1 < questions.length) {
-        setCurrentQuestionIndex((prev) => prev + 1);
+    if (currentQuestionIndex + 1 < questions.length) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+    } else {
+      if (res.data.status === 'waiting') {
+        // 👀 Other players still answering — go to NarrativeScreen which will show waiting state
+        router.replace(`/game/NarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
+      } else if (res.data.status === 'complete') {
+        // ✅ All players answered, narrative generated — go to NarrativeScreen
+        router.replace(`/game/NarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
       } else {
-       router.replace(`/game/LoadingNarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
+        // Fallback just in case
+        router.replace(`/game/NarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
       }
-    } catch (err) {
-      console.error('❌ Failed to submit answer:', err);
     }
-  };
+  } catch (err) {
+    console.error('❌ Failed to submit answer:', err);
+  }
+};
+
 
   return (
     <ScrollView contentContainerStyle={[utl.flex1, utl.bgDark, utl.px24, utl.py64]}>
