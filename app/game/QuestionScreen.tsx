@@ -12,6 +12,7 @@ export default function QuestionScreen() {
 
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [isWaiting, setIsWaiting] = useState(false);
   const [currentAnswer, setCurrentAnswer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -82,11 +83,21 @@ export default function QuestionScreen() {
  const handleNext = async () => {
   try {
     const res = await api.post(`/answers/${gameId}/${playerId}/${round}`, {
-      question: currentQuestion.question,
-      answer: currentAnswer,
-      type: currentQuestion.type || 'text',
-      selected_option: currentAnswer || null,
-    });
+  question: currentQuestion.question,
+  answer: currentAnswer,
+  type: currentQuestion.type || 'text',
+  selected_option: currentAnswer,
+});
+
+if (res.data.status === 'waiting') {
+  setIsWaiting(true);      // Ensure you've defined: const [isWaiting, setIsWaiting] = useState(false);
+  return;                 // Stop further navigation
+} else if (res.data.status === 'complete') {
+  router.replace(`/game/NarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
+  return;
+}
+// Otherwise, fall through to move to next question as you already had.
+
 
     setCurrentAnswer(null);
 
@@ -109,8 +120,21 @@ export default function QuestionScreen() {
   }
 };
 
+if (isWaiting) {
+  return (
+    <View style={[utl.flex1, utl.bgDark, utl.itemsCenter]}>
+      <Text style={[utl.textLight, utl.textCenter]}>
+        Waiting for other players to finish answering...
+      </Text>
+    </View>
+  );
+}
+
 
   return (
+
+    
+
     <ScrollView contentContainerStyle={[utl.flex1, utl.bgDark, utl.px24, utl.py64]}>
       <Text style={[utl.textGold, utl.textCenter, utl.text2xl, utl.fontJostBold]}>
         🌀 Round {round} - Question {currentQuestionIndex + 1} of {questions.length}
