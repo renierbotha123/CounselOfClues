@@ -121,14 +121,10 @@ if (res.data.status === 'waiting') {
 };
 
 if (isWaiting) {
-  return (
-    <View style={[utl.flex1, utl.bgDark, utl.itemsCenter]}>
-      <Text style={[utl.textLight, utl.textCenter]}>
-        Waiting for other players to finish answering...
-      </Text>
-    </View>
-  );
+  router.replace(`/game/LoadingNarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
+  return null;
 }
+
 
 
   return (

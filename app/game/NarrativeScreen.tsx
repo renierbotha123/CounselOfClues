@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, ScrollView, Animated, Easing } from 'react-native';
+import { View, Text, ScrollView, Animated } from 'react-native';
 import { utl } from '../../styles/utl';
 import PrimaryButton from '../../components/PrimaryButtons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -40,9 +40,9 @@ export default function NarrativeScreen() {
     fetchGameAndPlayer();
   }, [gameId, playerId, round]);
 
-  // Poll for narrative until it's ready
+  // Poll for narrative and clue until ready
   useEffect(() => {
-    if (!gameId || isNaN(round)) return;
+    if (!gameId || !playerId || isNaN(round)) return;
 
     setIsLoading(true);
     setDisplayedText('');
@@ -50,12 +50,11 @@ export default function NarrativeScreen() {
 
     const pollForNarrative = async () => {
       try {
-        const response = await api.get(`/narratives/game/${gameId}?round=${round}`);
+        const res = await api.get(`/answers/${gameId}/${playerId}/${round}`);
+        const clueText = res.data.clue;
+        const story = res.data.narrative;
 
-        const story = response.data.narrative;
-        const clueText = response.data.clue;
-
-        if (story && story.length > 0 && !story.includes('goes here')) {
+        if (story && story.length > 0) {
           setNarrative(story);
           setClue(clueText);
           setIsLoading(false);
@@ -67,9 +66,8 @@ export default function NarrativeScreen() {
     };
 
     intervalId = setInterval(pollForNarrative, 3000);
-
     return () => clearInterval(intervalId);
-  }, [gameId, round]);
+  }, [gameId, playerId, round]);
 
   // ✍️ Typewriter effect
   useEffect(() => {
@@ -85,7 +83,6 @@ export default function NarrativeScreen() {
     };
 
     if (!isLoading && narrative) run();
-
     return () => { cancelled = true; };
   }, [narrative, isLoading]);
 
@@ -141,7 +138,7 @@ export default function NarrativeScreen() {
             <PrimaryButton title="Call for Vote" onPress={handleCallVote} />
           )}
           {isAdmin && (
-            <PrimaryButton title="Continue" onPress={handleContinue} />
+            <PrimaryButton style={[utl.mb12]} title="Continue" onPress={handleContinue} />
           )}
         </>
       )}
