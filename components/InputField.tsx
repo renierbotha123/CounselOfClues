@@ -11,6 +11,7 @@ type InputFieldProps = {
   secure?: boolean;
   style?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<TextStyle>;
+  multiline?: boolean;
 };
 
 export default function InputField({

@@ -1,54 +1,77 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { View, Text, ScrollView, BackHandler } from 'react-native';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import api from '../../src/api/api';
 import { utl } from '../../styles/utl';
 import PrimaryButton from '../../components/PrimaryButtons';
-
+import { QuestionRenderer } from '../../components/Questions/QuestionRenderer';
 
 export default function QuestionScreen() {
   const router = useRouter();
- const { gameId, playerId, round } = useLocalSearchParams();
-console.log('QuestionScreen loaded with gameId:', gameId, 'playerId:', playerId, 'round:', round);
-
-if (!playerId) {
-  return (
-    <View style={[utl.flex1, utl.bgDark, utl.px24, utl.py64, utl.itemsCenter, utl.justifyCenter]}>
-      <Text style={[utl.textError, utl.textBase, utl.fontInter]}>
-        Error: No player ID provided.
-      </Text>
-    </View>
-  );
-}
-
-
+  const { gameId, playerId, round } = useLocalSearchParams();
 
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answer, setAnswer] = useState('');
-  const [answers, setAnswers] = useState<string[]>([]);
+  const [currentAnswer, setCurrentAnswer] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
+  // 🔙 Override Android back button to return to Lobby
+  useFocusEffect(
+  React.useCallback(() => {
+    const onBackPress = () => {
+      router.replace(`/game/LobbyScreen?gameId=${gameId}&playerId=${playerId}`);
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [gameId, playerId])
+);
+
+
+  // ⏳ Wait for questions to be ready (polling)
   useEffect(() => {
-    if (!gameId) return;
+    if (!gameId || !playerId || !round) return;
 
-    const fetchQuestions = async () => {
+    let tries = 0;
+    const maxTries = 30;
+
+    const pollForQuestions = async () => {
       try {
-        const response = await api.get(`/questions/game/${gameId}?round=${round}`);
-        console.log('✅ Fetched questions:', response.data);
-        setQuestions(response.data);
-      } catch (error) {
-        console.error('❌ Error fetching questions:', error);
+        const res = await api.get(`/questions/game/${gameId}/player/${playerId}?round=${round}`);
+        if (res.data && res.data.length > 0) {
+          setQuestions(res.data);
+          setLoading(false);
+        } else if (tries < maxTries) {
+          tries++;
+          setTimeout(pollForQuestions, 1000); // try again in 1s
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch questions:', err);
+        setLoading(false);
       }
     };
 
-    fetchQuestions();
-  }, [gameId]);
+    pollForQuestions();
+  }, [gameId, playerId, round]);
+
+  if (loading) {
+    return (
+      <View style={[utl.flex1, utl.bgDark, utl.itemsCenter, utl.justifyCenter]}>
+        <Text style={[utl.textLight, utl.fontInter]}>
+          Loading your question...
+        </Text>
+      </View>
+    );
+  }
 
   if (!questions.length) {
     return (
-      <View style={[utl.flex1, utl.bgDark, utl.px24, utl.py64, utl.itemsCenter, utl.justifyCenter]}>
-        <Text style={[utl.textLight, utl.textBase, utl.fontInter]}>
-          No questions found for this game.
+      <View style={[utl.flex1, utl.bgDark, utl.itemsCenter, utl.justifyCenter]}>
+        <Text style={[utl.textError, utl.fontInter]}>
+          No questions available. Please wait or contact the host.
         </Text>
       </View>
     );
@@ -56,75 +79,54 @@ if (!playerId) {
 
   const currentQuestion = questions[currentQuestionIndex];
 
- const handleNext = async () => {
-  if (!answer.trim()) return;
-
-  try {
-    console.log('Posting answer:', {
-      game_id: gameId,
-      player_id: playerId,
-      question: currentQuestion.question,
-      answer: answer.trim(),
-    });
-
-   await api.post('/answers', {
-  game_id: gameId,
-  player_id: playerId,
-  question: currentQuestion.question,
-  answer: answer.trim(),
-  round_number: round,
-});
-
-    console.log('✅ Answer submitted to server');
-
-    setAnswer('');
-
-    if (currentQuestionIndex + 1 < questions.length) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      console.log('✅ All answers submitted. Navigating to NarrativeScreen.');
-      router.push(`/game/NarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
+  const handleNext = async () => {
+    try {
+  await api.post(`/answers/${gameId}/${playerId}/${round}`, {
+    question: currentQuestion.question, // ✅ Required by DB
+    answer: currentAnswer,
+    type: currentQuestion.type || 'text',
+    selected_option: currentAnswer, // optional — only used for multiple choice
+  });
 
 
+      setCurrentAnswer(null);
+
+      if (currentQuestionIndex + 1 < questions.length) {
+        setCurrentQuestionIndex((prev) => prev + 1);
+      } else {
+       router.replace(`/game/LoadingNarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
+      }
+    } catch (err) {
+      console.error('❌ Failed to submit answer:', err);
     }
-  } catch (error) {
-    console.error('❌ Error submitting answer:', error);
-  }
-};
-
-
-
+  };
 
   return (
     <ScrollView contentContainerStyle={[utl.flex1, utl.bgDark, utl.px24, utl.py64]}>
       <Text style={[utl.textGold, utl.textCenter, utl.text2xl, utl.fontJostBold]}>
-  🌀 Round {round} - Question {currentQuestionIndex + 1} of {questions.length}
-</Text>
+        🌀 Round {round} - Question {currentQuestionIndex + 1} of {questions.length}
+      </Text>
+
+      {currentQuestion.clue && (
+  <Text style={[utl.textLight, utl.textCenter, utl.mt16, utl.mb16]}>
+    🕵️ Secret Clue: <Text style={[utl.textGold]}>{currentQuestion.clue}</Text>
+  </Text>
+)}
 
 
-      <View style={[utl.mb16]}>
-        <Text style={[utl.textLight, utl.textBase, utl.fontInter, utl.mb12]}>
-          {currentQuestion.question}
-        </Text>
-
-        <TextInput
-          value={answer}
-          onChangeText={setAnswer}
-          placeholder="Type your answer..."
-          placeholderTextColor="#888"
-          style={[
-            utl.bgSurface,
-            utl.textDark,
-            utl.p12,
-            utl.roundedLg,
-            utl.border1,
-            utl.fontInter,
-            utl.mb16
-          ]}
+      <View style={[utl.mt24]}>
+        <QuestionRenderer
+          question={currentQuestion}
+          onAnswer={setCurrentAnswer}
+          answer={currentAnswer}
         />
-
-        <PrimaryButton title="Next" onPress={handleNext} />
       </View>
+
+      <PrimaryButton
+        title={currentQuestionIndex + 1 < questions.length ? 'Next' : 'Finish'}
+        onPress={handleNext}
+        disabled={!currentAnswer}
+      />
     </ScrollView>
   );
 }

@@ -1,56 +1,35 @@
 import React from 'react';
-import { Pressable, Text, StyleProp, ViewStyle, TextStyle, View } from 'react-native';
+import { Pressable, Text, StyleSheet } from 'react-native';
 import { utl } from '../styles/utl';
 
 type PrimaryButtonProps = {
-  title?: string;
+  title: string;
   onPress: () => void;
-  icon?: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
-  textStyle?: StyleProp<TextStyle>;
+  disabled?: boolean;
 };
 
-
-export default function PrimaryButton({
-  title,
-  onPress,
-  icon,
-  style,
-  textStyle
-}: PrimaryButtonProps) {
+export default function PrimaryButton({ title, onPress, disabled = false }: PrimaryButtonProps) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={[
         utl.bgPrimary,
-        utl.py12,
-        utl.px16,
-        utl.roundedLg,
-        utl.itemsCenter,
-        utl.flexRow,
-        utl.justifyCenter,
-        utl.wFull,
-        style
+        utl.p12,
+        utl.roundedMd,
+        disabled && styles.disabled,
+        utl.mb16
       ]}
     >
-      {icon && (
-        <View style={[utl.mr8]}>
-          {icon}
-        </View>
-      )}
-      {title && (
-        <Text
-          style={[
-            utl.textDark,
-            utl.fontJostMedium,
-            utl.textBase,
-            utl.textCenter,
-            textStyle
-          ]}
-        >
-          {title}
-        </Text>
-      )}
+      <Text style={[utl.textDark, utl.textCenter, utl.fontJostBold]}>
+        {title}
+      </Text>
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  disabled: {
+    opacity: 0.5,
+  },
+});

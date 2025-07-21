@@ -62,24 +62,44 @@ console.log('✅ Computed isAdmin:', playerId === response.data.created_by?.toSt
 }, [gameId]);
 
 useEffect(() => {
-  if (gameStatus === 'in-progress') {
-    console.log('✅ Game status changed to in-progress. Navigating!');
-    router.replace(`/game/QuestionScreen?gameId=${gameId}&playerId=${playerId}&round=1`);
-  }
+  const checkAndNavigate = async () => {
+    if (gameStatus !== 'in-progress' || !gameId || !playerId) return;
+
+    try {
+      // Check if questions are available for this player yet
+      const res = await api.get(`/questions/game/${gameId}/player/${playerId}?round=1`);
+
+      if (res.data.length > 0) {
+        router.replace(`/game/QuestionScreen?gameId=${gameId}&playerId=${playerId}&round=1`);
+      } else {
+        console.log('⏳ Questions not ready yet, retrying in 2s...');
+        setTimeout(checkAndNavigate, 2000);
+      }
+    } catch (err) {
+      console.error('❌ Failed checking for questions:', err);
+      setTimeout(checkAndNavigate, 2000); // Retry anyway
+    }
+  };
+
+  checkAndNavigate();
 }, [gameStatus]);
 
 
 
 const handleStartGame = async () => {
   try {
-    await api.post(`/games/${gameId}/start`);
+    await api.post(`/games/${gameId}/start`, {
+      playerId: playerId, // 👈 include this!
+    });
     console.log('✅ Game started!');
-    // Refetch status to trigger auto-nav for admin too
-    fetchGameInfo();
+    fetchGameInfo(); // Refresh status after starting
   } catch (error) {
     console.error('❌ Error starting game:', error);
+    console.log('Starting game as playerId:', playerId);
+
   }
 };
+
 
 
 const getStatusLabel = (status: string) => {
