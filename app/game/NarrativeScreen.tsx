@@ -4,10 +4,14 @@ import { utl } from '../../styles/utl';
 import PrimaryButton from '../../components/PrimaryButtons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import api from '../../src/api/api';
+import GoToLobbyButton from '../../components/GoToLobbyButton';
 
 export default function NarrativeScreen() {
   const router = useRouter();
-  const { gameId, playerId, round: roundParam } = useLocalSearchParams();
+  const { gameId: g, playerId: p, round: roundParam } = useLocalSearchParams();
+
+  const gameId = Array.isArray(g) ? g[0] : g || '';
+  const playerId = Array.isArray(p) ? p[0] : p || '';
   const round = parseInt((Array.isArray(roundParam) ? roundParam[0] : roundParam) || '1', 10);
 
   const [narrative, setNarrative] = useState('');
@@ -15,90 +19,68 @@ export default function NarrativeScreen() {
   const [displayedText, setDisplayedText] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isPenalized, setIsPenalized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   const dotOpacity = useRef(new Animated.Value(0)).current;
 
-  // Fetch game + player data
+  // ✅ Fetch game + player info
   useEffect(() => {
-    if (!gameId || !playerId) return;
-
-    const fetchGameAndPlayer = async () => {
+    const fetchMeta = async () => {
       try {
         const gameRes = await api.get(`/games/${gameId}`);
-        const createdBy = gameRes.data.created_by?.toString();
-        setIsAdmin(playerId === createdBy);
+        setIsAdmin(playerId === gameRes.data.created_by?.toString());
 
         const playerRes = await api.get(`/players/${playerId}`);
         const penalizedRound = playerRes.data.penalized_round;
         setIsPenalized(Boolean(penalizedRound && round === penalizedRound));
-      } catch (error) {
-        console.error('❌ Error fetching game/player:', error);
+      } catch (err) {
+        console.error('❌ Failed to fetch game/player info:', err);
       }
     };
-
-    fetchGameAndPlayer();
+    if (gameId && playerId) fetchMeta();
   }, [gameId, playerId, round]);
 
-  // Poll for narrative and clue until ready
+  // ✅ Get narrative + clue
   useEffect(() => {
-    if (!gameId || !playerId || isNaN(round)) return;
+    console.log('🧪 Final narrative state:', narrative);
+console.log('🧪 Final clue state:', clue);
 
-    setIsLoading(true);
-    setDisplayedText('');
-    let intervalId: NodeJS.Timeout;
+  if (!gameId || !playerId || !round) return;
 
-    const pollForNarrative = async () => {
-      try {
-        const res = await api.get(`/answers/${gameId}/${playerId}/${round}`);
-        const clueText = res.data.clue;
-        const story = res.data.narrative;
+  const fetchStory = async () => {
+    try {
+      const res = await api.get(`/answers/${gameId}/${playerId}/${round}`);
+      if (res.data) {
+        console.log('📦 Narrative response:', res.data);
+        setNarrative(res.data.narrative || '');
+        setClue(res.data.clue || '');
+        console.log('📢 Story received:', res.data.narrative);
+console.log('📢 Clue received:', res.data.clue);
 
-        if (story && story.length > 0) {
-          setNarrative(story);
-          setClue(clueText);
-          setIsLoading(false);
-          clearInterval(intervalId);
-        }
-      } catch (error) {
-        console.error('❌ Error polling narrative:', error);
       }
-    };
+    } catch (err) {
+      console.error('❌ Error fetching narrative:', err);
+    }
+  };
 
-    intervalId = setInterval(pollForNarrative, 3000);
-    return () => clearInterval(intervalId);
-  }, [gameId, playerId, round]);
+  fetchStory();
+}, [gameId, playerId, round]);
 
-  // ✍️ Typewriter effect
+  // ✅ Typewriter effect
   useEffect(() => {
+    if (!narrative) return;
+
     let cancelled = false;
-
+    setDisplayedText('');
     const run = async () => {
-      setDisplayedText('');
       for (let i = 0; i < narrative.length; i++) {
         if (cancelled) break;
         setDisplayedText((prev) => prev + narrative[i]);
-        await new Promise((r) => setTimeout(r, 20));
+        await new Promise((r) => setTimeout(r, 15));
       }
     };
-
-    if (!isLoading && narrative) run();
+    run();
     return () => { cancelled = true; };
-  }, [narrative, isLoading]);
-
-  // 🔘 Dots animation while loading
-  useEffect(() => {
-    if (isLoading) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(dotOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-          Animated.timing(dotOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
-        ])
-      ).start();
-    } else {
-      dotOpacity.setValue(0);
-    }
-  }, [isLoading]);
+  }, [narrative]);
 
   const handleCallVote = async () => {
     await api.patch(`/players/${playerId}/vote-caller`, { game_id: gameId, round });
@@ -118,12 +100,7 @@ export default function NarrativeScreen() {
         🌀 Round {round}
       </Text>
 
-      {isLoading ? (
-        <Text style={[utl.textLight, utl.textCenter]}>
-          Waiting for all players to answer
-          <Animated.Text style={{ opacity: dotOpacity }}>...</Animated.Text>
-        </Text>
-      ) : (
+      {narrative ? (
         <>
           <Text style={[utl.textLight, utl.fontInter, utl.textBase, utl.mb24]}>
             {displayedText}
@@ -141,7 +118,14 @@ export default function NarrativeScreen() {
             <PrimaryButton style={[utl.mb12]} title="Continue" onPress={handleContinue} />
           )}
         </>
+      ) : (
+        <Text style={[utl.textLight, utl.textCenter]}>
+          Waiting for the story to arrive
+          <Animated.Text style={{ opacity: dotOpacity }}>...</Animated.Text>
+        </Text>
       )}
+
+      <GoToLobbyButton gameId={gameId} playerId={playerId} />
     </ScrollView>
   );
 }

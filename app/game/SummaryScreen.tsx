@@ -4,14 +4,17 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import PrimaryButton from '../../components/PrimaryButtons';
 import { utl } from '../../styles/utl';
 import api from '../../src/api/api';
+import GoToLobbyButton from '../../components/GoToLobbyButton';
 
 export default function SummaryScreen() {
   const router = useRouter();
-  const { gameId, playerId, round: roundParam, votedForId } = useLocalSearchParams();
-  const round = parseInt(
-    typeof roundParam === 'string' ? roundParam : Array.isArray(roundParam) ? roundParam[0] ?? '1' : '1',
-    10
-  );
+  const { gameId: g, playerId: p, round: r, votedForId: v } = useLocalSearchParams();
+
+const gameId = Array.isArray(g) ? g[0] : g || '';
+const playerId = Array.isArray(p) ? p[0] : p || '';
+const round = parseInt(Array.isArray(r) ? r[0] : r || '1', 10);
+const votedForId = Array.isArray(v) ? v[0] : v || '';
+
 
   console.log('SummaryScreen loaded with', { gameId, playerId, round, votedForId });
 
@@ -131,6 +134,8 @@ export default function SummaryScreen() {
           )}
         </>
       )}
+      <GoToLobbyButton gameId={gameId} playerId={playerId} />
+
     </View>
   );
 }

@@ -3,12 +3,17 @@ import { View, Text, FlatList, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import api from '../../src/api/api';
 import { utl } from '../../styles/utl';
+import GoToLobbyButton from '../../components/GoToLobbyButton';
 
 export default function VotingScreen() {
   const router = useRouter();
-  const { gameId, playerId, round: roundParam } = useLocalSearchParams();
-  const round = parseInt((Array.isArray(roundParam) ? roundParam[0] : roundParam) || '1', 10);
-  console.log('VotingScreen loaded with gameId:', gameId, 'playerId:', playerId, 'round:', round);
+  const { gameId: g, playerId: p, round: r } = useLocalSearchParams();
+
+const gameId = Array.isArray(g) ? g[0] : g || '';
+const playerId = Array.isArray(p) ? p[0] : p || '';
+const round = parseInt(Array.isArray(r) ? r[0] : r || '1', 10);
+
+console.log('VotingScreen loaded with gameId:', gameId, 'playerId:', playerId, 'round:', round);
 
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +125,10 @@ export default function VotingScreen() {
           }}
         />
       )}
+
+      <GoToLobbyButton gameId={gameId} playerId={playerId} />
+
     </View>
+    
   );
 }

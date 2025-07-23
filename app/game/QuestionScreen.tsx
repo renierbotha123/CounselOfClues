@@ -1,3 +1,4 @@
+// QuestionScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, BackHandler } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
@@ -5,39 +6,42 @@ import api from '../../src/api/api';
 import { utl } from '../../styles/utl';
 import PrimaryButton from '../../components/PrimaryButtons';
 import { QuestionRenderer } from '../../components/Questions/QuestionRenderer';
+import GoToLobbyButton from '../../components/GoToLobbyButton';
 
 export default function QuestionScreen() {
   const router = useRouter();
-  const { gameId, playerId, round } = useLocalSearchParams();
+  const { gameId: g, playerId: p, round: r } = useLocalSearchParams();
+
+const gameId = Array.isArray(g) ? g[0] : g || '';
+const playerId = Array.isArray(p) ? p[0] : p || '';
+const round = parseInt(Array.isArray(r) ? r[0] : r || '1', 10);
+
+
+  
 
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [isWaiting, setIsWaiting] = useState(false);
   const [currentAnswer, setCurrentAnswer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔙 Override Android back button to return to Lobby
   useFocusEffect(
-  React.useCallback(() => {
-    const onBackPress = () => {
-      router.replace(`/game/LobbyScreen?gameId=${gameId}&playerId=${playerId}`);
-      return true;
-    };
+    React.useCallback(() => {
+      const onBackPress = () => {
+        router.replace(`/game/LobbyScreen?gameId=${gameId}&playerId=${playerId}`);
+        return true;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => sub.remove();
+    }, [gameId, playerId])
+  );
 
-    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => subscription.remove();
-  }, [gameId, playerId])
-);
-
-
-  // ⏳ Wait for questions to be ready (polling)
   useEffect(() => {
     if (!gameId || !playerId || !round) return;
 
     let tries = 0;
     const maxTries = 30;
 
-    const pollForQuestions = async () => {
+    const poll = async () => {
       try {
         const res = await api.get(`/questions/game/${gameId}/player/${playerId}?round=${round}`);
         if (res.data && res.data.length > 0) {
@@ -45,7 +49,7 @@ export default function QuestionScreen() {
           setLoading(false);
         } else if (tries < maxTries) {
           tries++;
-          setTimeout(pollForQuestions, 1000); // try again in 1s
+          setTimeout(poll, 1000);
         } else {
           setLoading(false);
         }
@@ -55,15 +59,13 @@ export default function QuestionScreen() {
       }
     };
 
-    pollForQuestions();
+    poll();
   }, [gameId, playerId, round]);
 
   if (loading) {
     return (
       <View style={[utl.flex1, utl.bgDark, utl.itemsCenter, utl.justifyCenter]}>
-        <Text style={[utl.textLight, utl.fontInter]}>
-          Loading your question...
-        </Text>
+        <Text style={[utl.textLight, utl.fontInter]}>Loading your question...</Text>
       </View>
     );
   }
@@ -80,68 +82,44 @@ export default function QuestionScreen() {
 
   const currentQuestion = questions[currentQuestionIndex];
 
- const handleNext = async () => {
+  const handleNext = async () => {
+  if (!currentAnswer) return;
+
   try {
-    const res = await api.post(`/answers/${gameId}/${playerId}/${round}`, {
-  question: currentQuestion.question,
-  answer: currentAnswer,
-  type: currentQuestion.type || 'text',
-  selected_option: currentAnswer,
-});
-
-if (res.data.status === 'waiting') {
-  setIsWaiting(true);      // Ensure you've defined: const [isWaiting, setIsWaiting] = useState(false);
-  return;                 // Stop further navigation
-} else if (res.data.status === 'complete') {
-  router.replace(`/game/NarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
-  return;
-}
-// Otherwise, fall through to move to next question as you already had.
-
+    await api.post(`/answers/${gameId}/${playerId}/${round}`, {
+      question: currentQuestion.question,
+      answer: currentAnswer,
+      type: currentQuestion.type || 'text',
+      selected_option: currentAnswer,
+    });
 
     setCurrentAnswer(null);
 
-    if (currentQuestionIndex + 1 < questions.length) {
-      setCurrentQuestionIndex((prev) => prev + 1);
+    const isLastQuestion = currentQuestionIndex + 1 >= questions.length;
+
+    if (isLastQuestion) {
+      // ✅ All questions answered — go to loading screen
+      router.replace(`/game/LoadingNarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
     } else {
-      if (res.data.status === 'waiting') {
-        // 👀 Other players still answering — go to NarrativeScreen which will show waiting state
-        router.replace(`/game/NarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
-      } else if (res.data.status === 'complete') {
-        // ✅ All players answered, narrative generated — go to NarrativeScreen
-        router.replace(`/game/NarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
-      } else {
-        // Fallback just in case
-        router.replace(`/game/NarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
-      }
+      setCurrentQuestionIndex((prev) => prev + 1);
     }
   } catch (err) {
     console.error('❌ Failed to submit answer:', err);
   }
 };
 
-if (isWaiting) {
-  router.replace(`/game/LoadingNarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
-  return null;
-}
-
-
 
   return (
-
-    
-
     <ScrollView contentContainerStyle={[utl.flex1, utl.bgDark, utl.px24, utl.py64]}>
       <Text style={[utl.textGold, utl.textCenter, utl.text2xl, utl.fontJostBold]}>
         🌀 Round {round} - Question {currentQuestionIndex + 1} of {questions.length}
       </Text>
 
       {currentQuestion.clue && (
-  <Text style={[utl.textLight, utl.textCenter, utl.mt16, utl.mb16]}>
-    🕵️ Secret Clue: <Text style={[utl.textGold]}>{currentQuestion.clue}</Text>
-  </Text>
-)}
-
+        <Text style={[utl.textLight, utl.textCenter, utl.mt16, utl.mb16]}>
+          🕵️ Secret Clue: <Text style={[utl.textGold]}>{currentQuestion.clue}</Text>
+        </Text>
+      )}
 
       <View style={[utl.mt24]}>
         <QuestionRenderer
@@ -156,6 +134,8 @@ if (isWaiting) {
         onPress={handleNext}
         disabled={!currentAnswer}
       />
+      <GoToLobbyButton gameId={gameId} playerId={playerId} />
+
     </ScrollView>
   );
 }

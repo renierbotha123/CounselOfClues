@@ -4,10 +4,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import api from '../../src/api/api';
 import { utl } from '../../styles/utl';
 import PrimaryButton from '../../components/PrimaryButtons';
+import GoToLobbyButton from '../../components/GoToLobbyButton';
+
 
 export default function ResultsScreen() {
   const router = useRouter();
-  const { gameId } = useLocalSearchParams();
+  const { gameId: g, playerId: p } = useLocalSearchParams();
+const gameId = Array.isArray(g) ? g[0] : g || '';
+const playerId = Array.isArray(p) ? p[0] : p || '';
+
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [murderer, setMurderer] = useState<string | null>(null);
@@ -91,6 +96,9 @@ export default function ResultsScreen() {
         title="Back to Home"
         onPress={() => router.replace('/')}
       />
+      <GoToLobbyButton gameId={gameId} playerId={playerId} />
+
     </View>
+    
   );
 }
