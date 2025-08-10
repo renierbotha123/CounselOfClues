@@ -61,44 +61,48 @@ console.log('✅ Computed isAdmin:', playerId === response.data.created_by?.toSt
   return () => clearInterval(interval);
 }, [gameId]);
 
-useEffect(() => {
-  const checkAndNavigate = async () => {
-    if (gameStatus !== 'in-progress' || !gameId || !playerId) return;
+// useEffect(() => {
+//  const checkAndNavigate = async () => {
+//    if (gameStatus !== 'in-progress' || !gameId || !playerId) return;
 
-    try {
+//    try {
       // Check if questions are available for this player yet
-      const res = await api.get(`/questions/game/${gameId}/player/${playerId}?round=1`);
+//      const res = await api.get(`/questions/game/${gameId}/player/${playerId}?round=1`);
 
-      if (res.data.length > 0) {
-        router.replace(`/game/QuestionScreen?gameId=${gameId}&playerId=${playerId}&round=1`);
-      } else {
-        console.log('⏳ Questions not ready yet, retrying in 2s...');
-        setTimeout(checkAndNavigate, 2000);
-      }
-    } catch (err) {
-      console.error('❌ Failed checking for questions:', err);
-      setTimeout(checkAndNavigate, 2000); // Retry anyway
-    }
-  };
+//      if (res.data.length > 0) {
+//        router.replace(`/game/QuestionScreen?gameId=${gameId}&playerId=${playerId}&round=1`);
+//      } else {
+//        console.log('⏳ Questions not ready yet, retrying in 2s...');
+//        setTimeout(checkAndNavigate, 2000);
+//      }
+//    } catch (err) {
+//      console.error('❌ Failed checking for questions:', err);
+//      setTimeout(checkAndNavigate, 2000); // Retry anyway
+//    }
+//  };
 
-  checkAndNavigate();
-}, [gameStatus]);
+//  checkAndNavigate();
+//}, [gameStatus]);
 
 
 
 const handleStartGame = async () => {
   try {
-    await api.post(`/games/${gameId}/start`, {
-      playerId: playerId, // 👈 include this!
-    });
+    await api.post(`/games/${gameId}/start`, { playerId: playerId });
     console.log('✅ Game started!');
-    fetchGameInfo(); // Refresh status after starting
+
+    await api.post(`/questions/generate/${gameId}/round/1`);
+   console.log('✅ AI-generated story and questions');
+
+    // Wait 2 seconds before navigating (ensure backend finishes)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    router.replace(`/game/NarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=1`);
   } catch (error) {
     console.error('❌ Error starting game:', error);
-    console.log('Starting game as playerId:', playerId);
-
   }
 };
+
 
 
 

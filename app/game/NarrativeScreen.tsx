@@ -41,6 +41,8 @@ export default function NarrativeScreen() {
 
   // ✅ Get narrative + clue
   useEffect(() => {
+    console.log(`🔍 Fetching narrative from /answers/${gameId}/${playerId}/${round}`);
+
     console.log('🧪 Final narrative state:', narrative);
 console.log('🧪 Final clue state:', clue);
 
@@ -82,14 +84,30 @@ console.log('📢 Clue received:', res.data.clue);
     return () => { cancelled = true; };
   }, [narrative]);
 
+  useEffect(() => {
+  Animated.loop(
+    Animated.sequence([
+      Animated.timing(dotOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(dotOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ])
+  ).start();
+}, []);
+
   const handleCallVote = async () => {
     await api.patch(`/players/${playerId}/vote-caller`, { game_id: gameId, round });
     router.push(`/game/VotingScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
   };
 
-  const handleContinue = () => {
-    router.push(`/game/QuestionScreen?gameId=${gameId}&playerId=${playerId}&round=${round + 1}`);
-  };
+const handleContinue = () => {
+  if (round === 1) {
+    // First round: go to questions that were already generated
+    router.push(`/game/QuestionScreen?gameId=${gameId}&playerId=${playerId}&round=${round}`);
+  } else {
+    // Later rounds: go to next narrative (AI will generate narrative + questions after answers)
+    router.push(`/game/LoadingNarrativeScreen?gameId=${gameId}&playerId=${playerId}&round=${round + 1}`);
+  }
+};
+
 
   return (
     <ScrollView style={[utl.flex1, utl.bgDark, utl.px24, utl.py32]}>
@@ -111,9 +129,10 @@ console.log('📢 Clue received:', res.data.clue);
             <Text style={[utl.textDark, utl.fontJostMedium, utl.textLg]}>{clue}</Text>
           </View>
 
-          {!isPenalized && (
-            <PrimaryButton title="Call for Vote" onPress={handleCallVote} />
-          )}
+         {!isPenalized && round > 1 && (
+  <PrimaryButton title="Call for Vote" onPress={handleCallVote} />
+)}
+
           {isAdmin && (
             <PrimaryButton style={[utl.mb12]} title="Continue" onPress={handleContinue} />
           )}

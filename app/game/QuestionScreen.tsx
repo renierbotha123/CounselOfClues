@@ -38,29 +38,19 @@ const round = parseInt(Array.isArray(r) ? r[0] : r || '1', 10);
   useEffect(() => {
     if (!gameId || !playerId || !round) return;
 
-    let tries = 0;
-    const maxTries = 30;
+   const fetchQuestions = async () => {
+  try {
+    const res = await api.get(`/questions/game/${gameId}/player/${playerId}?round=${round}`);
+    setQuestions(res.data || []);
+  } catch (err) {
+    console.error('❌ Failed to fetch questions:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
-    const poll = async () => {
-      try {
-        const res = await api.get(`/questions/game/${gameId}/player/${playerId}?round=${round}`);
-        if (res.data && res.data.length > 0) {
-          setQuestions(res.data);
-          setLoading(false);
-        } else if (tries < maxTries) {
-          tries++;
-          setTimeout(poll, 1000);
-        } else {
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('❌ Failed to fetch questions:', err);
-        setLoading(false);
-      }
-    };
-
-    poll();
-  }, [gameId, playerId, round]);
+fetchQuestions();
+}, [gameId, playerId, round]);
 
   if (loading) {
     return (
